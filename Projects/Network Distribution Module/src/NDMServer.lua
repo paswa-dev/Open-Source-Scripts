@@ -27,10 +27,10 @@ local FastSignal = require(rs:FindFirstChild("FastSignal", true))
 if not FastSignal then error("Missing Required Dependency: FastSignal") return nil end 
 
 local NDM = {}
+local Networks = {}
 NDM.__index = NDM
 
 local function createNetworkBin(name, thread_amount, thread_type)
-    if not Networks[thread_type] then return "Invalid Network Type" end
     if NDMBin[name] then return "Overlapping Network Exists" end
     local bin = Instance.new("Folder")
     bin.Name = name
@@ -50,12 +50,13 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
     local config = {}
     config.Name = name
     config.Bin = createNetworkBin(name, thread_amount, network_type)
-    config.OnServerEvent = FastSignal.new()
+    config.OnRecieved = FastSignal.new()
     ---
     config.network_type = network_type
     config.thead_amount = thread_amount
     setmetatable(config, NDMBin)
     config.Connections = config:EstablishConnections()
+    Networks[name] = config
     return config
 end
 
@@ -64,7 +65,7 @@ function NDM.RemoveNetwork(name)
 end
 
 function NDM.GetNetwork(name)
-
+    return Networks[name]
 end
 ----------------
 
@@ -73,7 +74,16 @@ function NDM:Fire(...)
 end
 
 function NDM:Establish()
-
+    local Connections = {}
+    local connection_name
+    if self.network_type == "RemoteFunction" then connection_name = "OnServerInvoke" 
+    elseif self.network_type == "RemoteEvent" then connection_name = "OnServerEvent" end
+    for _, thread_object in pairs(self.Bin:GetChildren()) do
+        table.insert(Connections, thread_object[connection_name](function(...)
+            self.OnRecieved:Fire(...) -- FInd a way to return data...
+        end))
+    end
+    return 
 end
 
 function NDM:Destroy()
