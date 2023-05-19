@@ -65,9 +65,9 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
     config.Threads = config.Bin:GetChildren()
     config.CurrentThread = 1
     config.ThreadAmount = thread_amount
-    
+    config.Connections = {}
     setmetatable(config, NDMBin)
-    config.Connections = config:EstablishConnections()
+    config:Establish()
     Networks[name] = config
     return config
 end
@@ -90,13 +90,12 @@ end
 
 function NDM:Establish()
     -- This creates the connections. Then sets them up to basically return a response based on the fired bindable event/function.
-    local Connections = {}
+    
     for _, thread_object in pairs(self.Bin:GetChildren()) do
-        table.insert(Connections, thread_object[self.connection_name](function(...)
+        table.insert(self.Connections, thread_object[self.connection_name](function(...)
             return response = self.OnRecieved[self.method_name](OnRecieved, ...)
         end))
     end
-    return Connections
 end
 
 function NDM:Destroy()
@@ -109,8 +108,13 @@ function NDM:Destroy()
 end
 
 function NDM:NextThread()
-
-
+    local _next = self.CurrentThread + 1
+    if _next > self.ThreadAmount then
+        self.CurrentThread = 1
+        return 1
+    end
+    self.CurrentThread = _next
+    return _next
 end
 
 
