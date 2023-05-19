@@ -33,8 +33,6 @@ local function identifyBindable(network_type)
 end
 
 local NDMBin = createBin() -- Specify a parent if you want it to go somewhere else.
-local FastSignal = require(rs:FindFirstChild("FastSignal", true))
-if not FastSignal then error("Missing Required Dependency: FastSignal") return nil end 
 
 local NDM = {}
 local Networks = {}
@@ -60,7 +58,7 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
     local config = {}
     config.Name = name
     config.Bin = createNetworkBin(name, thread_amount, network_type)
-    config.method_name, config.connection_name = identifyMethod(self.network_type)
+    config.method_name, config.connection_name = identifyMethod(network_type)
     config.OnRecieved = Instance.new(config.method_name)
     config.Threads = config.Bin:GetChildren()
     config.CurrentThread = 1
