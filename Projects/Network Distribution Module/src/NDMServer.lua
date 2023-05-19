@@ -22,6 +22,16 @@ local function createBin(parent)
     return folder
 end
 
+local function identifyMethod(network_type)
+    if self.network_type == "RemoteFunction" then return "OnServerInvoke", "Invoke"
+    elseif self.network_type == "RemoteEvent" then return "OnServerEvent", "Fire" end
+end
+
+local function identifyBindable(network_type)
+    if self.network_type == "RemoteFunction" then return "BindableFunction"
+    elseif self.network_type == "RemoteEvent" then return "BindableEvent" end
+end
+
 local NDMBin = createBin() -- Specify a parent if you want it to go somewhere else.
 local FastSignal = require(rs:FindFirstChild("FastSignal", true))
 if not FastSignal then error("Missing Required Dependency: FastSignal") return nil end 
@@ -50,10 +60,12 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
     local config = {}
     config.Name = name
     config.Bin = createNetworkBin(name, thread_amount, network_type)
-    config.OnRecieved = FastSignal.new()
-    ---
-    config.network_type = network_type
-    config.thead_amount = thread_amount
+    config.method_name, config.connection_name = identifyMethod(self.network_type)
+    config.OnRecieved = Instance.new(config.method_name)
+    config.Threads = config.Bin:GetChildren()
+    config.CurrentThread = 1
+    config.ThreadAmount = thread_amount
+    
     setmetatable(config, NDMBin)
     config.Connections = config:EstablishConnections()
     Networks[name] = config
@@ -61,7 +73,7 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
 end
 
 function NDM.RemoveNetwork(name)
-    if NDMBin[name] then NDMBin[name]:Destroy() else return "No Network" end
+    if Networks[name] then Networks[name]:Destroy() else return "No Network" end
 end
 
 function NDM.GetNetwork(name)
@@ -70,23 +82,34 @@ end
 ----------------
 
 function NDM:Fire(...)
-
+    -- This fires the remote event or function.
+    local thread_object = self.Threads[self.CurrentThread]
+    thread_object[self.method_name](thread_object, ...)
+    self:NextThread()
 end
 
 function NDM:Establish()
+    -- This creates the connections. Then sets them up to basically return a response based on the fired bindable event/function.
     local Connections = {}
-    local connection_name
-    if self.network_type == "RemoteFunction" then connection_name = "OnServerInvoke" 
-    elseif self.network_type == "RemoteEvent" then connection_name = "OnServerEvent" end
     for _, thread_object in pairs(self.Bin:GetChildren()) do
-        table.insert(Connections, thread_object[connection_name](function(...)
-            self.OnRecieved:Fire(...) -- FInd a way to return data...
+        table.insert(Connections, thread_object[self.connection_name](function(...)
+            return response = self.OnRecieved[self.method_name](OnRecieved, ...)
         end))
     end
-    return 
+    return Connections
 end
 
 function NDM:Destroy()
+    for _, connection in next, self.Connections do
+        connection:Disconnect()
+    end
+    self.OnRecieved:Destroy()
+    self.Bin:Destroy()
+    Networks[self.Name] = nil
+end
+
+function NDM:NextThread()
+
 
 end
 
