@@ -116,7 +116,7 @@ function NDM:NextThread()
 end
 
 function NDM:VerifyConfigurationFault()
-    if gaurdConfiguration(self) then self:Destroy(); return true end
+    if gaurdConfiguration(self) then return true end
 end
 
 
