@@ -53,6 +53,10 @@ local function createNetworkBin(name, thread_amount, thread_type)
     return bin
 end
 
+local function gaurdConfiguration(config)
+    if (config.method_name or config.connection_name or config.Threads or config.Bin) == nil then return true else return false end
+end
+
 ----------------
 function NDM.CreateNetwork(name, thread_amount, network_type)
     local config = {}
@@ -65,6 +69,7 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
     config.ThreadAmount = thread_amount
     config.Connections = {}
     setmetatable(config, NDMBin)
+    if config:VerifyConfigurationFault() then config:SoftDestroy(); return end
     config:Establish()
     Networks[name] = config
     return config
@@ -103,6 +108,13 @@ function NDM:Destroy()
     self.OnRecieved:Destroy()
     self.Bin:Destroy()
     Networks[self.Name] = nil
+    self = nil
+end
+
+function NDM:SoftDestroy()
+    self.OnRecieved:Destroy()
+    self.Bin:Destroy()
+    self = nil
 end
 
 function NDM:NextThread()
@@ -113,6 +125,10 @@ function NDM:NextThread()
     end
     self.CurrentThread = _next
     return _next
+end
+
+function NDM:VerifyConfigurationFault()
+    if gaurdConfiguration(self) then self:Destroy(); return true end
 end
 
 
