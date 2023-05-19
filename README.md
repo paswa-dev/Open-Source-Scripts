@@ -4,4 +4,4 @@
 - [ ] Network Distribution Module
 
 - Disclaimer:
-**Any attempt to re-sell or use these open-sourced projects without proper credit to me, as the owner, will result in legal trouble.**
+**I do not condone the acts or modifications of these scripts. If someone does resell these as an exploit, hack, or cheat, I am not liable for the damages or repercussions.**
