@@ -20,14 +20,15 @@ local function getBin(parent)
 end
 
 local function identifyMethod(network_type)
-	if network_type == "RemoteFunction" then return "OnServerInvoke", "Invoke"
-	elseif network_type == "RemoteEvent" then return "OnServerEvent", "Fire" end
+	if network_type == "RemoteFunction" then return "InvokeServer", "OnClientInvoke"
+	elseif network_type == "RemoteEvent" then return "FireServer", "OnClientEvent" end
 end
 
 local function identifyBindable(network_type)
-	if network_type == "RemoteFunction" then return "BindableFunction"
-	elseif network_type == "RemoteEvent" then return "BindableEvent" end
+	if network_type == "RemoteFunction" then return "BindableFunction", "Invoke"
+	elseif network_type == "RemoteEvent" then return "BindableEvent", "Fire" end
 end
+
 
 local NDMBin = getBin() -- Specify a parent path if you have a custom directory.
 
@@ -56,13 +57,13 @@ function NDM.FetchNetwork(name)
 	config.Name = name
 	config.Bin = networkInformation.Bin
 	config.method_name, config.connection_name = identifyMethod(networkInformation.network_type)
+	config.bindable_name, config.bindable_method = identifyBindable(networkInformation.network_type)
 	config.Threads = networkInformation.Threads
 	config.ThreadAmount = networkInformation.ThreadAmount
-	config.OnRecieved = Instance.new(config.method_name)
+	config.OnRecieved = Instance.new(config.bindable_name)
 	config.CurrentThread = 1
 	config.Connections = {}
-	setmetatable(config, NDMBin)
-	if config:VerifyConfigurationFault() then config:SoftDestroy(); return end
+	setmetatable(config, NDM)
 	config:Establish()
 	Networks[name] = config
 	return config
@@ -82,10 +83,16 @@ end
 
 function NDM:Establish()
 	-- This creates the connections. Then sets them up to basically return a response based on the fired bindable event/function.
-
+	if self.connection_name == "OnClientInvoke" then
+		for _, thread_object in pairs(self.Bin:GetChildren()) do
+			thread_object[self.connection_name] = function(...)
+				return self.OnRecieved[self.bindable_method](self.OnRecieved, ...)
+			end
+		end
+	end
 	for _, thread_object in pairs(self.Bin:GetChildren()) do
-		table.insert(self.Connections, thread_object[self.connection_name](function(...)
-			return self.OnRecieved[self.method_name](self.OnRecieved, ...)
+		table.insert(self.Connections, thread_object[self.connection_name]:Connect(function(...)
+			return self.OnRecieved[self.bindable_method](self.OnRecieved, ...)
 		end))
 	end
 end
@@ -116,7 +123,7 @@ function NDM:NextThread()
 end
 
 function NDM:VerifyConfigurationFault()
-	if gaurdConfiguration(self) then return true end
+	if gaurdConfiguration(self) then return true else return false end
 end
 
 

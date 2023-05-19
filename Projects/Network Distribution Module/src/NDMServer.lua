@@ -23,13 +23,13 @@ local function createBin(parent)
 end
 
 local function identifyMethod(network_type)
-	if network_type == "RemoteFunction" then return "OnServerInvoke", "Invoke"
-	elseif network_type == "RemoteEvent" then return "OnServerEvent", "Fire" end
+	if network_type == "RemoteFunction" then return "InvokeClient", "OnServerInvoke"
+	elseif network_type == "RemoteEvent" then return "FireClient", "OnServerEvent" end
 end
 
 local function identifyBindable(network_type)
-	if network_type == "RemoteFunction" then return "BindableFunction"
-	elseif network_type == "RemoteEvent" then return "BindableEvent" end
+	if network_type == "RemoteFunction" then return "BindableFunction", "Invoke"
+	elseif network_type == "RemoteEvent" then return "BindableEvent", "Fire" end
 end
 
 local NDMBin = createBin() -- Specify a parent if you want it to go somewhere else.
@@ -39,7 +39,7 @@ local Networks = {}
 NDM.__index = NDM
 
 local function createNetworkBin(name, thread_amount, thread_type)
-	if NDMBin[name] then return "Overlapping Network Exists" end
+	if NDMBin:FindFirstChild(name) then return "Overlapping Network Exists" end
 	local bin = Instance.new("Folder")
 	bin.Name = name
 	bin.Parent = NDMBin
@@ -63,16 +63,17 @@ function NDM.CreateNetwork(name, thread_amount, network_type)
 	config.Name = name
 	config.Bin = createNetworkBin(name, thread_amount, network_type)
 	config.method_name, config.connection_name = identifyMethod(network_type)
-	config.OnRecieved = Instance.new(config.method_name)
+	config.bindable_name, config.bindable_method = identifyBindable(network_type)
+	config.OnRecieved = Instance.new(config.bindable_name)
 	config.Threads = config.Bin:GetChildren()
 	config.CurrentThread = 1
 	config.ThreadAmount = thread_amount
 	config.Connections = {}
-	setmetatable(config, NDMBin)
-	if config:VerifyConfigurationFault() then config:SoftDestroy(); return end
+	setmetatable(config, NDM)
 	config:Establish()
 	Networks[name] = config
-	return config
+	return config	
+	
 end
 
 function NDM.RemoveNetwork(name)
@@ -93,10 +94,18 @@ end
 
 function NDM:Establish()
 	-- This creates the connections. Then sets them up to basically return a response based on the fired bindable event/function.
-
+	if self.connection_name == "OnServerInvoke" then
+		for _, thread_object in pairs(self.Bin:GetChildren()) do
+			thread_object[self.connection_name] = function(...)
+				return self.OnRecieved[self.bindable_method](self.OnRecieved, ...)
+			end
+		end
+		return
+	end
+	
 	for _, thread_object in pairs(self.Bin:GetChildren()) do
-		table.insert(self.Connections, thread_object[self.connection_name](function(...)
-			return self.OnRecieved[self.method_name](self.OnRecieved, ...)
+		table.insert(self.Connections, thread_object[self.connection_name]:Connect(function(...)
+			return self.OnRecieved[self.bindable_method](self.OnRecieved, ...)
 		end))
 	end
 end
@@ -128,7 +137,7 @@ function NDM:NextThread()
 end
 
 function NDM:VerifyConfigurationFault()
-	if gaurdConfiguration(self) then return true end
+	if gaurdConfiguration(self) then return true else return false end
 end
 
 
