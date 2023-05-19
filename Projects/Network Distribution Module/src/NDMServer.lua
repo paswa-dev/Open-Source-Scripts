@@ -13,56 +13,72 @@ of automatically allowing it to create the remotes.
 Possibly may make a version specifcally for Server-Server communication.
 ]]
 
-
+local RS = game:GetService("ReplicatedStorage")
 
 local function createBin(parent)
     local folder = Instance.new("Folder")
     folder.Name = "NDM"
-    folder.Parent = (parent or game:GetService("ReplicatedStorage"))
+    folder.Parent = (parent or RS)
     return folder
 end
 
 local NDMBin = createBin() -- Specify a parent if you want it to go somewhere else.
+local FastSignal = require(rs:FindFirstChild("FastSignal", true))
+if not FastSignal then error("Missing Required Dependency: FastSignal") return nil end 
 
 local NDM = {}
 NDM.__index = NDM
-NDM.Networks = {
-    Function = 0,
-    Event = 1,
-    -- Bindable = 2
-}
-
-local Networks = {
-    [0] = function(parent, amount)
-        for i=1, amount do
-            local Thread = Instance.new("RemoteFunction")
-            Thread.Name = tostring(i)
-            Thread.Parent = parent
-        end
-    end
-}
-
 
 local function createNetworkBin(name, thread_amount, thread_type)
-    if NDM.Networks
-    if NDMBin[name] then return "Network Exists" end
+    if not Networks[thread_type] then return "Invalid Network Type" end
+    if NDMBin[name] then return "Overlapping Network Exists" end
     local bin = Instance.new("Folder")
     bin.Name = name
     bin.Parent = NDMBin
+
+    for i=1, amount do
+        local Thread = Instance.new(thread_type)
+        Thread.Name = tostring(i)
+        Thread.Parent = parent
+    end
+
     return bin
 end
+
 ----------------
-function NDM.CreateNetwork(name, network_type) -- "
+function NDM.CreateNetwork(name, thread_amount, network_type)
     local config = {}
     config.Name = name
     config.Bin = createNetworkBin(name, thread_amount, network_type)
-
-    return setmetatable(config, NDMBin)
+    config.OnServerEvent = FastSignal.new()
+    ---
+    config.network_type = network_type
+    config.thead_amount = thread_amount
+    setmetatable(config, NDMBin)
+    config.Connections = config:EstablishConnections()
+    return config
 end
 
 function NDM.RemoveNetwork(name)
     if NDMBin[name] then NDMBin[name]:Destroy() else return "No Network" end
 end
+
+function NDM.GetNetwork(name)
+
+end
 ----------------
+
+function NDM:Fire(...)
+
+end
+
+function NDM:Establish()
+
+end
+
+function NDM:Destroy()
+
+end
+
 
 return NDM
