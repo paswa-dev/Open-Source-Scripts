@@ -23,7 +23,9 @@ function Shap.new(class_name: string) -- Possibly return a controlled component
             Component[key] = value
         end
 
-        return
+        ApplyProperties(classData, Component)
+        
+        return Component
 
     end
 end
