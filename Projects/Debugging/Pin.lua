@@ -34,40 +34,40 @@ local function MakePinInfo(name : string, adornee: Instance | Vector3 | nil, Pin
 end
 
 function pin.new(name: string, adornee : Instance | Vector3 | nil)
-    local ThisPinConfig = {}
-    ThisPinConfig.pin = MakePinInfo(name, adornee, nil, {
+    ---- Private
+    local Pin = {}
+    local isRunning = false
+    ---- Public
+    Pin.pin = MakePinInfo(name, adornee, nil, {})
+
+    function Pin:AddChild(element: Instance)
+        table.insert(Pin.pin.Children, element)
+    end
+    
+    function Pin:UpdateChildren(callback)
+        for _, child in next, Pin.pin.Children do
+            callback(child)
+        end
+    end
+    
+    function Pin:Enable()
+        if isRunning then return end
+        isRunning = true
+        while task.wait() do 
+            if not isRunning then break end
+            local NextPos = UpdatePinPosition(Pin.pin)
+            Pin:UpdateChildren(function(child)
+                child["Position"] = UDim2.fromOffset(NextPos.X, NextPos.Y)
+            end)
+        end
+    end
+    
+    function Pin:Disable()
+        if not isRunning then return end
         isRunning = false
-    })
-    setmetatable(ThisPinConfig, {__index = pin})
-    ThisPinConfig:Enable()
-    return ThisPinConfig
-end
-
-function pin:AddChild(element: Instance)
-    table.insert(self.pin.Children, element)
-end
-
-function pin:UpdateChildren(callback)
-    for _, child in next, self.pin.Children do
-        callback(child)
     end
-end
 
-function pin:Enable()
-    if self.Pin.isRunning then return end
-    self.Pin.isRunning = true
-    while task.wait() do 
-        if not self.Pin.isRunning then break end
-        local NextPos = UpdatePinPosition(self.pin)
-        self:UpdateChildren(function(child)
-            child["Position"] = UDim2.fromOffset(NextPos.X, NextPos.Y)
-        end)
-    end
-end
-
-function pin:Disable()
-    if not self.Pin.isRunning then return end
-    self.Pin.isRunning = false
+    return Pin
 end
 
 return pin
