@@ -3,6 +3,15 @@ local RS = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local SampledTime = task.wait()
 
+--[[
+`value_signal` is a object that must have a writable and readable `value_signal["Value"]`
+This value will be updated, make sure to keep track of it and update your main code via that value.
+! value_signal can be a table with ["Value"] !
+@API
+.any(old: any, new: any, t: number, value_signal: any)
+.string(old: string, new: string, t: number, value_signal: any)
+]]
+
 local function AccurateWaitV2(t)
 	local l = 0 do
 		repeat l = l + RS.Heartbeat:Wait() until l >= t
