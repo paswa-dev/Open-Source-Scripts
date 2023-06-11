@@ -19,24 +19,6 @@ type PinInfo = {
 ---- Mapping
 
 ---- UI Public Functions
-
-function pin.Make(name)
-	local UI = Instance.new(name)
-	return function(properties, parent)
-		for i, v in pairs(properties) do
-			if typeof(i) == "function" then
-				i(v, UI)
-			else
-				if not pin.Signal.isSignal(v) then
-					UI[i] = v
-				end
-			end
-		end
-		pin.Signal.ApplyToInstance(UI, properties, true)
-		if parent then UI["Parent"] = parent; properties["Parent"] = parent end
-		return UI, properties
-	end
-end
 ---- Local Functions
 
 local function UpdatePinPosition(pin: PinInfo)
@@ -76,6 +58,24 @@ local function Init()
 end
 
 ---- Public Functions
+
+function pin.Make(name)
+	local UI = Instance.new(name)
+	return function(properties, parent)
+		for i, v in pairs(properties) do
+			if typeof(i) == "function" then
+				i(v, UI)
+			else
+				if not pin.Signal.isSignal(v) then
+					UI[i] = v
+				end
+			end
+		end
+		pin.Signal.ApplyToInstance(UI, properties, true)
+		if parent then UI["Parent"] = parent; properties["Parent"] = parent end
+		return UI, properties
+	end
+end
 
 function pin.new(adornee : Instance | Vector3 | nil)
 	---- Private
